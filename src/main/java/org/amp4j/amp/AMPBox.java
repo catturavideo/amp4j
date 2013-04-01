@@ -1,4 +1,3 @@
-
 package org.amp4j.amp;
 
 import java.util.ArrayList;
@@ -16,6 +15,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.UnsupportedEncodingException;
 
 import java.lang.reflect.Field;
+
+import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 
 /**
  * small ordered key=>value mapping where the keys and values are both byte
@@ -231,20 +233,82 @@ public class AMPBox implements Map<byte[], byte[]> {
 
     public Object getAndDecode(String key, Class t) {
         byte[] toDecode = this.get(key);
-        if (null != toDecode) {
-            if ((t == int.class) || (t == Integer.class)) {
-                return Integer.decode(asString(toDecode));
-            } else if (t == String.class) {
+        if (null != toDecode)
+        {
+            if ((t == int.class) || (t == Integer.class))
+            {
+                return Integer.parseInt(asString(toDecode), 10);
+            }
+            else if (t == String.class)
+            {
                 return asString(toDecode, "UTF-8");
-            } else if ((t == boolean.class) || (t == Boolean.class)) {
+            }
+            else if ((t == boolean.class) || (t == Boolean.class))
+            {
                 String s = asString(toDecode);
-                if(s.equals("True")) {
+                if (s.equals("True"))
+                {
                     return Boolean.TRUE;
-                } else {
+                }
+                else if (s.equals("False"))
+                {
                     return Boolean.FALSE;
                 }
-            } else if (t == byte[].class) {
+                else
+                {
+                    throw new Error(String.format("Expected \"True\" or \"False\", not %s", s));
+                }
+            }
+            else if (t == byte[].class)
+            {
                 return toDecode;
+            }
+            else if ((t == long.class) || (t == Long.class))
+            {
+                return Long.parseLong(asString(toDecode), 10);
+            }
+            else if (t == DateTime.class)
+            {
+                // Should look something like this:
+                // 2012-01-23T12:34:56.054321-01:23
+                //
+                if (toDecode.length != 32)
+                {
+                    throw new Error("Expected DateTime argument to be 32 bytes in length.");
+                }
+
+                String s  = asString(toDecode);
+                int year  = Integer.parseInt(s.substring(0, 4), 10);
+                int month = Integer.parseInt(s.substring(5, 7), 10);
+                int day   = Integer.parseInt(s.substring(8, 10), 10);
+
+                int hour = Integer.parseInt(s.substring(11, 13), 10);
+                int min  = Integer.parseInt(s.substring(14, 16), 10);
+                int sec  = Integer.parseInt(s.substring(17, 19), 10);
+
+                int sec_micro   = Integer.parseInt(s.substring(20, 26), 10);
+                String tz_sign  = s.substring(26, 27);
+                int tz_hour     = Integer.parseInt(s.substring(27, 29), 10);
+                int tz_min      = Integer.parseInt(s.substring(30, 32), 10);
+
+                if (tz_sign.equals("+"))
+                {
+                    // pass
+                }
+                else if (tz_sign.equals("-"))
+                {
+                    tz_hour *= -1;
+                    tz_min *= -1;
+                }
+                else
+                {
+                    throw new Error("Bad timezone sign character: " + tz_sign);
+                }
+
+                DateTimeZone dtz = DateTimeZone.forOffsetHoursMinutes(tz_hour, tz_min);
+                DateTime dt = new DateTime(year, month, day, hour, min, sec, (sec_micro / 1000), dtz);
+
+                return dt;
             }
         }
         return null;
