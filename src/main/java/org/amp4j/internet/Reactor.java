@@ -79,14 +79,25 @@ public class Reactor {
         ServerSocket ss;
         InetSocketAddress addr;
 
-        TCPPort(int portno, IProtocol.IFactory pf) throws IOException {
+        TCPPort(int portno, IProtocol.IFactory pf, String iface) throws IOException {
             this.protocolFactory = pf;
             this.ssc = ServerSocketChannel.open();
             this.ssc.configureBlocking(false);
             this.ss = ssc.socket();
-            this.addr = new InetSocketAddress(portno);
+	    if (iface == null || iface.equals(""))
+	    {
+                this.addr = new InetSocketAddress(portno);
+	    }
+	    else
+	    {
+                this.addr = new InetSocketAddress(iface, portno);
+	    }
             this.ss.bind(this.addr);
             this.startListening();
+        }
+
+        TCPPort(int portno, IProtocol.IFactory pf) throws IOException {
+	    this(portno, pf, (String)null);
         }
 
         public void startListening() throws ClosedChannelException {
@@ -330,6 +341,13 @@ public class Reactor {
                                     IProtocol.IFactory factory)
         throws IOException {
         return new TCPPort(portno, factory);
+    }
+
+    public IListeningPort listenTCP(int portno,
+                                    IProtocol.IFactory factory,
+                                    String iface)
+        throws IOException {
+        return new TCPPort(portno, factory, iface);
     }
 
     public static void msg (String m) {
