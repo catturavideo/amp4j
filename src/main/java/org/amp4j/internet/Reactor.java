@@ -48,6 +48,7 @@ public class Reactor {
 
     public interface IListeningPort {
         void stopListening();
+        IAddress getHost();
     }
 
     /* It appears that this interface is actually unnamed in
@@ -109,6 +110,11 @@ public class Reactor {
             /// ???
             this.sk.cancel();
             interestOpsChanged();
+        }
+        
+        public IAddress getHost()
+        {
+            return new Address(addr.getHostString(), ss.getLocalPort());
         }
 
         public void doAccept() throws Throwable {
